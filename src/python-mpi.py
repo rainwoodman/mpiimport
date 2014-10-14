@@ -1,8 +1,7 @@
-
+#! python -S
 # usage python -S python-mpi.py yourscript.py args
 
 # this will handle exceptions gracefully with a call to mpiimport.abort()
-
 class OptionError(Exception):
     pass
 
@@ -65,7 +64,6 @@ class getopt(object):
                 self.remain = self.argv[optind:]
             yield (optopt, optarg, optind)
 
-import mpiimport; 
 import sys; 
 
 # save stdout in case it gets tampered
@@ -74,18 +72,34 @@ stdout = sys.stdout
 #parse args first
 command = None
 verbose = False
-opt = getopt(sys.argv, "vc:")
+implementation = None
+opt = getopt(sys.argv, "vc:I:")
+failure = None
 try:
     for optopt, optarg, optind in iter(opt):
         if optopt == 'c':
             command = optarg
         if optopt == 'v':
             verbose = True
+        if optopt == 'I':
+            implementation = optarg
+    sys.argv = opt.remain
 except OptionError as e:
+    failure = e
+
+if implementation == "openmpi":
+    # work around libmpi symbols not bound to the global namespace
+    # symptom is failure at hwloc ... libraries on missing symbols
+    import ctypes
+    libmpi = ctypes.CDLL("libmpi.so", ctypes.RTLD_GLOBAL)
+
+import mpiimport; 
+
+if failure:
     if mpiimport.COMM_WORLD.rank == 0:
         print opt.help()
     raise SystemExit
-sys.argv = opt.remain
+
 
 # install the hook
 mpiimport.install(tmpdir='/tmp', verbose=verbose, disable=False)

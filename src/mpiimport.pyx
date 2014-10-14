@@ -33,7 +33,12 @@ cdef bind(MPI_Comm comm):
     MPI_Comm_size(self.comm, &self.size)
     return self
 
-MPI_Init(NULL, NULL)
+cdef int provided = MPI_THREAD_MULTIPLE
+cdef int initialized
+MPI_Initialized(&initialized)
+if not initialized:
+    MPI_Init_thread(NULL, NULL, provided, &provided)
+
 COMM_WORLD = bind(MPI_COMM_WORLD)
 
 import imp
