@@ -136,4 +136,19 @@ It gets better with more complicated packages.
    1541 mpiimport-interpolate.16329
 ```
 
+## Performance on BlueWaters 
+1. Single node, 32 ranks, 40 runs average, `import numpy`.
+   ```
+   mpiimport 15.498075     +/- 2.45510705864
+   python    19.7058461538 +/- 1.23226379207
+   ```
+   There is already a measurable improvement on even a single node job.
+
+1. 32 nodes, 1024 ranks, single run, 'import numpy'.
+
+1. 128 nodes, 4096 ranks, single run, 'import numpy'.
+
+1. 512 nodes, 16384 ranks, single run, 'import numpy'.
+
 [Hopper-UG] https://cug.org/proceedings/attendee_program_cug2012/includes/files/pap124.pdf
+
