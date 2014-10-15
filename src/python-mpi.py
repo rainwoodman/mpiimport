@@ -73,10 +73,13 @@ stdout = sys.stdout
 command = None
 verbose = False
 implementation = None
-opt = getopt(sys.argv, "vc:I:")
+opt = getopt(sys.argv, "dvc:I:")
 failure = None
+disable = False
 try:
     for optopt, optarg, optind in iter(opt):
+        if optopt == 'd':
+            disable = True
         if optopt == 'c':
             command = optarg
         if optopt == 'v':
@@ -95,6 +98,7 @@ if implementation == "openmpi":
 
 import mpiimport; 
 
+mpiimport.blacklist.append('')
 if failure:
     if mpiimport.COMM_WORLD.rank == 0:
         print opt.help()
@@ -102,7 +106,7 @@ if failure:
 
 
 # install the hook
-mpiimport.install(tmpdir='/tmp', verbose=verbose, disable=False)
+mpiimport.install(tmpdir='/tmp', verbose=verbose, disable=disable)
 
 import traceback
 try:

@@ -56,6 +56,9 @@ d = {
         imp.C_BUILTIN: "builtin",
         imp.C_EXTENSION: "extension",
         imp.PY_FROZEN: "frozen"}
+
+blacklist = []
+
 cdef class Profiler:
     cdef readonly double time
     cdef readonly object title
@@ -154,6 +157,12 @@ def _cleanup():
 
 sys.exitfunc = _cleanup
 
+class DummyLoader(object):
+    def __init__(self, module):
+        self.module = module
+    def load_module(self, fullname):
+        return self.module
+
 class Loader(object):
     def __init__(self, file, pathname, description):
         self.file = file
@@ -175,7 +184,8 @@ class Loader(object):
                     print 'module', fullname, 'using ', len(self.file), 'bytes', 'C_EXTENSION'
                 #print "loading extension"
                 mod = loadcextensionfromstring(fullname, self.file, self.pathname, self.description) 
-            elif False: # This doesn't work yet! self.description[-1] == imp.PKG_DIRECTORY:
+            elif False: # use the file=None branch
+                   # this doesn't work #self.description[-1] == imp.PKG_DIRECTORY:
                 mod = sys.modules.setdefault(fullname, imp.new_module(fullname))
                 mod.__path__ = []
                 mod.__file__ = "<%s>" % self.__class__.__name__
@@ -212,7 +222,7 @@ class Finder(object):
     def find_module(self, fullname, path=None):
         file, pathname, description = None, None, None
         name = fullname.split('.')[-1]
-        if _disable:
+        if _disable or (name in blacklist):
             tfind.start()
             try:
                 file, pathname, description = imp.find_module(name, path)
@@ -245,20 +255,20 @@ class Finder(object):
                         s = file.read()
                         file.close()
                         file = s
-                    elif False: #description[-1] == imp.PKG_DIRECTORY:
+                    elif description[-1] == imp.PKG_DIRECTORY:
+                        pass
                         # PKG_DIRECTORY doesn't work yet.
-                        print 'PKG:finding file by name', d[description[-1]], pathname, description
-                        file = pathname + "/__init__.py"
-
-                        try:
-                            file = open(file, 'r')
-                            s = file.read()
-                            file.close()
-                            file = s
-                        except OSError:
-                            file = ImportError("file %s not exist" %  file)
+                        # print 'PKG:finding file by name', d[description[-1]], pathname, description
+                        #file = pathname + "/__init__.py"
+                        #try:
+                        #    file = open(file, 'r')
+                        #    s = file.read()
+                        #    file.close()
+                        #    file = s
+                        #except OSError:
+                        #    file = ImportError("file %s not exist" %  file)
                     else:
-                        print 'finding file by name', d[description[-1]]
+                        #print 'finding file by name', d[description[-1]]
                         if file:
                             file = file.name
                         else:
@@ -272,7 +282,6 @@ class Finder(object):
             tcomm.start()
             file, pathname, description = self.comm.bcast((file, pathname, description))
             tcomm.end()
-
         if isinstance(file, Exception):
             return None
         return Loader(file, pathname, description)
@@ -296,7 +305,10 @@ def install(comm=COMM_WORLD, tmpdir='/tmp', verbose=False, disable=False):
         import _sysconfigdata
         import re
 
-        if comm.rank == 0:
-            site.main1()
+        #if comm.rank == 0:
+        site.main1()
+
+        # to hang on matched imports
+        comm.barrier()
         sys.path = comm.bcast(sys.path)
         site.main2()
