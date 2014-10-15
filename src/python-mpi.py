@@ -109,14 +109,19 @@ if failure:
 mpiimport.install(tmpdir='/tmp', verbose=verbose, disable=disable)
 
 import traceback
-try:
+def main():
     if command:
         exec(command)
     else:
         main = opt.remain[0]
         execfile(main)
 
-except Exception as e:
-    stdout.write(traceback.format_exc())
-    stdout.flush()
-    mpiimport.abort()
+if mpiimport.COMM_WORLD.size > 1:
+    try:
+        main()
+    except Exception as e:
+        stdout.write(traceback.format_exc())
+        stdout.flush()
+        mpiimport.abort()
+else:
+    main()
