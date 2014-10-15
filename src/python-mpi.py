@@ -93,8 +93,8 @@ except OptionError as e:
 if implementation == "openmpi":
     # work around libmpi symbols not bound to the global namespace
     # symptom is failure at hwloc ... libraries on missing symbols
-    import ctypes
-    libmpi = ctypes.CDLL("libmpi.so", ctypes.RTLD_GLOBAL)
+    import _ctypes
+    libmpi = _ctypes.dlopen("libmpi.so", _ctypes.RTLD_GLOBAL)
 
 import mpiimport; 
 
