@@ -12,6 +12,9 @@ Currently we only implemented `mpiimport` for Python 2.7.
 
 ## Installation and usage
 
+mpiimport compiles and runs on BlueWaters (NCSA, with bw-python), Edison(NERSC, with python), 
+and Rock Clusters 6.4 with Intel MPI.
+
 To install, clone the source and make
 ```
     $ git clone http://github.com/rainwoodman/mpiimport
@@ -137,6 +140,11 @@ It gets better with more complicated packages.
 ```
 
 ## Performance on BlueWaters 
+Notice that on BlueWaters first aprun in the same partition is always 
+faster than the subsequent apruns. This is likely due to time in aprun
+to clean up the nodes for running the jobs. In case we reject
+significantly faster runs for both mpiimport and python cases.
+
 1. Single node, 32 ranks, 40 runs average, `import numpy`.
    ```
    mpiimport 15.498075     +/- 2.45510705864
@@ -144,11 +152,38 @@ It gets better with more complicated packages.
    ```
    There is already a measurable improvement on even a single node job.
 
-1. 32 nodes, 1024 ranks, single run, 'import numpy'.
+1. 32 nodes, 1024 ranks, 2 runs, 
+
+   1. 'import numpy.fft'.
+       ```
+       python      0m31.573s 0m32.939s
+       mpiimport   0m32.908s 0m33.478s
+       ```
+   1. 'import numpy.fft; import scipy.interpolate'
+       ```
+       python      0m51.268s 0m49.922s
+       mpiimport   0m38.913s 0m39.196s
+       ```
+   We see that for small scale jobs, communication time overshadows
+   the gain from reduced amount of IO operations on single ranks.
+   
+   As we import more modules, we see that mpiimport starts to show its
+   effect. The bare speed up is 20%.
 
 1. 128 nodes, 4096 ranks, single run, 'import numpy'.
 
 1. 512 nodes, 16384 ranks, single run, 'import numpy'.
+    1. 'import numpy'
+        ```
+        python     6m56.415s
+        mpiimport  2m3.517s
+        ```
+    1. 'import numpy.fft; import scipy.interpolate'
+        ```
+        python     8m50.109s
+        mpiimport  3m40.979s
+        ```
+    We do see a large improvement (> 50%) from pure python import.
 
 [Hopper-UG] https://cug.org/proceedings/attendee_program_cug2012/includes/files/pap124.pdf
 
