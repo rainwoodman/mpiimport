@@ -68,6 +68,18 @@ module content is pickled and broadcast to `MPI_COMM_WORLD`.
 All ranks then either compile and eval the script, or save the .so
 file to `/tmp` and load the extension dynamically.
 
+Some similarly motivated work are done by Asher Langton at
+https://github.com/langton/MPI_Import; we note that Langton optimizes
+the queries to the directory structures only; we optimizes the file
+operations as well.
+
+A completely different approach has been attempted by Matthew
+Turk (NCSA). Turk builds all extension modules 
+into the python interpreter, as builtin modules. The script files
+are combined into zip files. Turk's approach requires significant
+amount of work to inspect individual packages that are being used by
+the scripts; with the most amount of reduction in filesystem syscalls.
+
 ## Background and motivation
 Python does a lot of file operations upon startup.
 This is not an issue for small scale applications -- but on
