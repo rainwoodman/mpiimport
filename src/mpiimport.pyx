@@ -172,7 +172,7 @@ class Loader(object):
         if not _disable and self.file:
             if self.description[-1] == imp.PY_SOURCE:
                 mod = sys.modules.setdefault(fullname,imp.new_module(fullname))
-                mod.__file__ = "<%s>" % self.__class__.__name__
+                mod.__file__ = self.pathname
                 mod.__package__ = fullname.rpartition('.')[0]
                 if _verbose:
                     print 'module', fullname, 'using ', len(self.file), 'bytes', 'PY_SOURCE'
@@ -283,7 +283,8 @@ class Finder(object):
             file, pathname, description = self.comm.bcast((file, pathname, description))
             tcomm.end()
         if isinstance(file, Exception):
-            return None
+            #print 'Warning: fallback to python', name, fullname, file, pathname, description, 'at', path
+            raise file
         return Loader(file, pathname, description)
 
 def install(comm=COMM_WORLD, tmpdir='/tmp', verbose=False, disable=False):
