@@ -114,7 +114,7 @@ def loadcextensionfromstring(fullname, string, pathname, description):
         tio.end()
 
         if _verbose:
-            print 'module', fullname, 'using', name, 'via mpi'
+            print 'module', fullname, 'using', name, pathname, 'via mpi'
 
         #with open(name, mode=description[1]) as f2:
         tio.start()
@@ -122,7 +122,7 @@ def loadcextensionfromstring(fullname, string, pathname, description):
         tio.end()
         #print file, pathname, description
         tload.start()
-        mod = imp.load_module(fullname, f2, pathname, description)
+        mod = imp.load_module(fullname, f2, name, description)
         tload.end()
         if description[-1] == imp.C_EXTENSION:
             # important to hold a handle
