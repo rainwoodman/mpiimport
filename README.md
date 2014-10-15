@@ -155,11 +155,13 @@ significantly faster runs for both mpiimport and python cases.
 1. 32 nodes, 1024 ranks, 2 runs, 
 
    1. 'import numpy.fft'.
+
        ```
          python      0m31.573s 0m32.939s
          mpiimport   0m32.908s 0m33.478s
        ```
    1. 'import numpy.fft; import scipy.interpolate'
+
        ```
          python      0m51.268s 0m49.922s
          mpiimport   0m38.913s 0m39.196s
@@ -174,11 +176,13 @@ significantly faster runs for both mpiimport and python cases.
 
 1. 512 nodes, 16384 ranks, single run, 'import numpy'.
     1. 'import numpy'
+
         ```
           python     6m56.415s
           mpiimport  2m3.517s
         ```
     1. 'import numpy.fft; import scipy.interpolate'
+
         ```
           python     8m50.109s
           mpiimport  3m40.979s
