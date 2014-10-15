@@ -1,13 +1,24 @@
-
 # Python Import via MPI
 
+`mpiimport` is a Python import hook that delegates the file operations to
+the root rank of `MPI_COMM_WORLD`. 
+It significantly reduces the number of filesystem system calls at the
+start up of python scripts. 
+
+We believe that `mpiimport` can significantly reduce the start-up time of complex 
+python scripts on super-computers.
+
+Currently we only implemented `mpiimport` for Python 2.7.
+
 ## Installation and usage
-    clone the source and make
+
+To install, clone the source and make
 ```
     $ git clone http://github.com/rainwoodman/mpiimport
     $ cd mpiimport
     $ make CC=cc LDSHARED=cc
 ```
+Note that on different systems you need to set CC and LDSHARED accordingly.
 
 The binary will be in `bin` directory:
 ```
@@ -15,8 +26,8 @@ The binary will be in `bin` directory:
     mpiimport.so  mpisite.py  MPI.so  python-mpi.py
 ```
 
-To run your python mpi program with mpiimport, simply replace python
-with python-mpi.py
+To run your python mpi program with mpiimport, simply replace `python`
+with `python-mpi.py`
 
 For example, if the old invocation is
 ```
@@ -24,13 +35,45 @@ For example, if the old invocation is
 ```
 now we do
 ```
-    aprun -n 16384 bin/python-mpi.py mymassivepythoncode.py a b c 
+    aprun -n 16384 python -S bin/python-mpi.py mymassivepythoncode.py a b c 
 ```
+or on systems that supports shebang
+```
+    mpirun -n 16384 bin/python-mpi.py mymassivepythoncode.py a b c 
+```
+
+`python-mpi.py` supports the following arguments:
+
+```
+  -I openmpi   : workaround libmpi.so lazy binding issue 
+                with openmpi on Fedora and other linux systems;
+                not needed with Intel MPI or Cray MPI.
+  -c 'command' : execute command (like python -c )
+  -v           : verbose; writes out how each module is imported
+  -d           : debug mode; all modules are loaded locally; no
+                 communication through MPI.
+```
+
+We recommend invoking python interpreter running `python-mpi.py` with `-S`, 
+since this ensures `mpiimport` is imported at the earliest possible step of the
+the interpreter initialization. A different flavor of `site.py` is 
+imported, to maintain compatibility to traditional python.
+
+## How it is done
+
+Root rank resolves the qualified module name to a pathname and load
+the module into memory (either as script or the binary .so file). The
+module content is pickled and broadcast to `MPI_COMM_WORLD`. 
+
+All ranks then either compile and eval the script, or save the .so
+file to `/tmp` and load the extension dynamically.
+
 ## Background and motivation
 Python does a lot of file operations upon startup.
 This is not an issue for small scale applications -- but on
 applications at a massive scale (10K+ MPI ranks), these file
-operations become a burden to the shared file system.
+operations become a burden to the shared file system, just like the
+shared library burden, described in [Hopper-UG]
 
 For example, on a typical python installation with numpy the number of
 file operations to 
@@ -81,4 +124,4 @@ It gets better with more complicated packages.
    1541 mpiimport-interpolate.16329
 ```
 
-
+[Hopper-UG] https://cug.org/proceedings/attendee_program_cug2012/includes/files/pap124.pdf
