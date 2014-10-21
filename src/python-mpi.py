@@ -114,7 +114,10 @@ def main():
         exec(command)
     else:
         main = opt.remain[0]
-        execfile(main)
+        env = {}
+        env['__file__'] = main
+        env['__name__'] = "__main__"
+        execfile(main, env)
 
 if mpiimport.COMM_WORLD.size > 1:
     try:
