@@ -1,5 +1,5 @@
 CC=mpicc
-LDSHARED=mpicc -shared
+LDSHARED=$(CC) -shared
 
 # on BlueWaters
 # make CC=cc LDSHARED="cc -shared"
