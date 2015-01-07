@@ -1,7 +1,7 @@
 # Python Import via MPI
 
-One problem with large scale parallel application written in Python is the startup time. The Python
-Interpreter may spend before even start processing any useful user logic.
+One problem with large scale parallel application written in Python is the slow startup time. The Python
+Interpreter may spend half an hour before even start processing any useful user logic.
 
 Two factors contribute to the slowness:
  1 At start-up, thousands of file system operations are performed on the centralized shared 
