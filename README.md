@@ -3,17 +3,19 @@
 `mpiimport` is a Python import hook that delegates the file operations to
 the root rank of `MPI_COMM_WORLD`. 
 It significantly reduces the number of filesystem system calls at the
-start up of python scripts. 
+start up of python scripts.
 
 We believe that `mpiimport` can significantly reduce the start-up time of complex 
-python scripts on super-computers.
+python scripts on super-computers. Note that the gain is limited if dynamic linking 
+on the system is very slow. (For example, Hopper at NERSC). 
 
 Currently we only implemented `mpiimport` for Python 2.7.
 
 ## Installation and usage
 
-mpiimport compiles and runs on BlueWaters (NCSA, with bw-python), Edison(NERSC, with python), 
-and Rock Clusters 6.4 with Intel MPI.
+`mpiimport` compiles and runs on BlueWaters (NCSA, with bw-python), Edison(NERSC, with python), 
+and Rock Clusters 6.4 with Intel MPI. We have used `mpiimport` in production jobs with parallel MPI
+applications with upto 8,192 ranks on BlueWaters, and 512 ranks on Edison. 
 
 To install, clone the source and make
 ```
