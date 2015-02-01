@@ -112,11 +112,13 @@ mpiimport.install(tmpdir='/tmp', verbose=verbose, disable=disable)
 sys.mpiimport = mpiimport
 
 import traceback
+import os.path
 def main():
     if command:
         exec(command)
     else:
         main = opt.remain[0]
+        sys.path.insert(0, os.path.dirname(main))
         env = {}
         env['__file__'] = main
         env['__name__'] = "__main__"

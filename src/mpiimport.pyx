@@ -152,6 +152,8 @@ else:
 
 def finalize():
     cdef int initialized
+    if 'mpi4py' in sys.modules:
+        return
     MPI_Initialized(&initialized)
     if initialized:
         MPI_Finalize()
@@ -222,6 +224,12 @@ class Loader(object):
             tloadlocal.end()
         mod.__loader__ = self
         return mod
+def _try_attr(names):
+    parent = '.'.join(names[:-1])
+    if parent in sys.modules \
+            and hasattr(sys.modules[parent], names[-1]):
+        return DummyLoader(getattr(sys.modules[parent], names[-1]))
+    return None
 
 class Finder(object):
     def __init__(self, comm):
@@ -234,6 +242,9 @@ class Finder(object):
         collective = not _disjoint and not (fullname in blacklist)
         if not collective:
             return None
+        dummy =  _try_attr(names)
+        if dummy: return dummy
+
         name = names[-1]
         if self.rank == 0 or not collective:
             tfind.start()
