@@ -97,7 +97,8 @@ if implementation == "openmpi":
     import _ctypes
     libmpi = _ctypes.dlopen("libmpi.so", _ctypes.RTLD_GLOBAL)
 
-import mpiimport; 
+import mpiimport
+sys.mpiimport = mpiimport
 
 mpiimport.blacklist.append('matplotlib')
 if failure:

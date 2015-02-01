@@ -176,7 +176,7 @@ class Loader(object):
         self.pathname = pathname
         self.description = description
     def load_module(self, fullname):
-        collective = not _disable and not (fullname in blacklist)
+        collective = not _disjoint and not (fullname in blacklist)
         if collective and self.file:
             if self.description[-1] == imp.PY_SOURCE:
                 mod = sys.modules.setdefault(fullname,imp.new_module(fullname))
@@ -231,7 +231,7 @@ class Finder(object):
         file, pathname, description = None, None, None
         names = fullname.split('.')
 
-        collective = not _disable and not (fullname in blacklist)
+        collective = not _disjoint and not (fullname in blacklist)
         if not collective:
             return None
         name = names[-1]
@@ -300,9 +300,9 @@ def install(comm=COMM_WORLD, tmpdir='/tmp', verbose=False, disable=False):
     tall.start()
     global _tmpdir
     global _verbose
-    global _disable
+    global _disjoint
     _verbose = verbose or int(posix.environ.get('PYTHON_MPIIMPORT_VERBOSE', 0)) == 1
-    _disable = disable
+    _disjoint = disable
     _tmpdir = tmpdir
     sys.meta_path.append(Finder(comm))
 
@@ -323,14 +323,19 @@ def install(comm=COMM_WORLD, tmpdir='/tmp', verbose=False, disable=False):
         sys.path = comm.bcast(sys.path)
         site.main2()
 
-class Disable(object):
+class Disjoint(object):
     def __init__(self):
         pass
     def __enter__(self):
-        global _disable
-        _disable = True
+        stop()
     def __exit__(self, type, value, traceback):
-        global _disable
-        _disable = False
+        resume()
 
-disable = Disable()
+def stop():
+    global _disjoint
+    _disjoint = True
+def resume():
+    global _disjoint
+    _disjoint = False
+
+disjoint = Disjoint()
