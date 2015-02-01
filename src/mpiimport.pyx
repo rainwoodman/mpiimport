@@ -2,7 +2,7 @@ include "libmpi.pxd"
 import cPickle
 
 bytescomm = 0
-
+import traceback
 cdef class Comm(object):
     cdef MPI_Comm comm
     cdef readonly int rank
@@ -150,8 +150,14 @@ if hasattr(sys, 'exitfunc'):
 else:
     oldexitfunc = lambda : None
 
+def finalize():
+    cdef int initialized
+    MPI_Initialized(&initialized)
+    if initialized:
+        MPI_Finalize()
+
 def _cleanup():
-    MPI_Finalize()
+    finalize()
     oldexitfunc()
     return
 
@@ -161,6 +167,7 @@ class DummyLoader(object):
     def __init__(self, module):
         self.module = module
     def load_module(self, fullname):
+        mod = sys.modules.setdefault(fullname, self.module)
         return self.module
 
 class Loader(object):
@@ -169,7 +176,8 @@ class Loader(object):
         self.pathname = pathname
         self.description = description
     def load_module(self, fullname):
-        if not _disable and self.file:
+        collective = not _disable and not (fullname in blacklist)
+        if collective and self.file:
             if self.description[-1] == imp.PY_SOURCE:
                 mod = sys.modules.setdefault(fullname,imp.new_module(fullname))
                 mod.__file__ = self.pathname
@@ -221,28 +229,26 @@ class Finder(object):
         self.rank = comm.rank
     def find_module(self, fullname, path=None):
         file, pathname, description = None, None, None
-        name = fullname.split('.')[-1]
-        if _disable or (name in blacklist):
+        names = fullname.split('.')
+
+        collective = not _disable and not (fullname in blacklist)
+        if not collective:
+            return None
+        name = names[-1]
+        if self.rank == 0 or not collective:
             tfind.start()
             try:
+                #print self.rank, 'trying to load', name
                 file, pathname, description = imp.find_module(name, path)
             except ImportError as e:
+                #print self.rank, 'failed to load', fullname, name, e, path
                 file = e
-                pass
             tfind.end()
+        if collective:
+            # at this point, only rank 0 has the triplet
+            # we prepare to broadcast the content
+            #print fullname, file, pathname
             if self.rank == 0:
-                #print fullname, file, pathname, 'disable'
-                pass
-        else:
-            if self.rank == 0:
-                tfind.start()
-                try:
-                    file, pathname, description = imp.find_module(name, path)
-                except ImportError as e:
-                    file = e
-
-                tfind.end()
-                #print fullname, file, pathname
                 if not isinstance(file, Exception):
                     tio.start()
                     if description[-1] == imp.PY_SOURCE:
@@ -279,11 +285,14 @@ class Finder(object):
                     if _verbose:
                         print 'Warning: failed to find module', name, fullname, file, pathname, description, 'at', path
 
+            # ready to broadcast
             tcomm.start()
             file, pathname, description = self.comm.bcast((file, pathname, description))
             tcomm.end()
+
         if isinstance(file, Exception):
-            #print 'Warning: fallback to python', name, fullname, file, pathname, description, 'at', path
+            #print 'Warning: failed to load', name, fullname, file, pathname, description, 'at', path
+            # we do not return None, which would fall back to python
             raise file
         return Loader(file, pathname, description)
 
@@ -313,3 +322,15 @@ def install(comm=COMM_WORLD, tmpdir='/tmp', verbose=False, disable=False):
         comm.barrier()
         sys.path = comm.bcast(sys.path)
         site.main2()
+
+class Disable(object):
+    def __init__(self):
+        pass
+    def __enter__(self):
+        global _disable
+        _disable = True
+    def __exit__(self, type, value, traceback):
+        global _disable
+        _disable = False
+
+disable = Disable()

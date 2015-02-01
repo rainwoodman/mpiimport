@@ -68,6 +68,7 @@ import sys;
 
 # save stdout in case it gets tampered
 stdout = sys.stdout
+stderr = sys.stderr
 
 #parse args first
 command = None
@@ -98,7 +99,7 @@ if implementation == "openmpi":
 
 import mpiimport; 
 
-mpiimport.blacklist.append('')
+mpiimport.blacklist.append('matplotlib')
 if failure:
     if mpiimport.COMM_WORLD.rank == 0:
         print opt.help()
@@ -107,6 +108,7 @@ if failure:
 
 # install the hook
 mpiimport.install(tmpdir='/tmp', verbose=verbose, disable=disable)
+sys.mpiimport = mpiimport
 
 import traceback
 def main():
