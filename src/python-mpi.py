@@ -74,11 +74,14 @@ stderr = sys.stderr
 command = None
 verbose = False
 implementation = None
-opt = getopt(sys.argv, "dvc:I:")
+opt = getopt(sys.argv, "T:dvc:I:")
 failure = None
 disable = False
+tmpdir = '/tmp'
 try:
     for optopt, optarg, optind in iter(opt):
+        if optopt == 'T':
+            tmpdir = optarg
         if optopt == 'd':
             disable = True
         if optopt == 'c':
@@ -108,7 +111,7 @@ if failure:
 
 
 # install the hook
-mpiimport.install(tmpdir='/tmp', verbose=verbose, disable=disable)
+mpiimport.install(tmpdir=tmpdir, verbose=verbose, disable=disable)
 sys.mpiimport = mpiimport
 
 import traceback
