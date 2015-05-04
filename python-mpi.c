@@ -1,5 +1,8 @@
-/* Author:  Lisandro Dalcin   */
-/* Contact: dalcinl@gmail.com */
+
+/* python-mpi with package broad-casting */
+/* Author: Yu Feng */
+/* Adapted from the origina python-mpi.c by Lisandro Dalcin   */
+/* Contact: rainwoodman@gmail.com */
 
 /* -------------------------------------------------------------------------- */
 
@@ -8,6 +11,8 @@
 #define MPICH_IGNORE_CXX_SEEK 1
 #define OMPI_IGNORE_CXX_SEEK 1
 #include <mpi.h>
+
+#include <unistd.h> /**/
 
 #ifdef __FreeBSD__
 #include <floatingpoint.h>
@@ -31,7 +36,88 @@ main(int argc, char **argv)
 #endif
   return PyMPI_Main(argc, argv);
 }
+static int bcast_packages(int * argc, char ***argv) {
+    char ** PACKAGES = NULL;
+    int NPACKAGES = 0;
 
+    PACKAGES = (char**) malloc(sizeof(char*) * *argc);
+    NPACKAGES = 0;
+
+    char ** newargv = (char**) malloc(sizeof(char*) * *argc);
+
+    char ** oldargv = *argv;
+    int oldargc = *argc; 
+    int newargc = 0;
+    int i;
+
+    /* parse argv to find all packages that shall be bcasted */
+    for(i = 0; i < oldargc; i ++) {
+        if (!strncmp(oldargv[i], "-bcast", 6)) {
+            PACKAGES[NPACKAGES] = strdup(oldargv[i + 1]);
+            NPACKAGES ++;
+            i ++;
+        } else {
+            newargv[newargc] = oldargv[i];
+            newargc ++;
+        }
+    }
+
+    /* now bcast packages to PYTHONHOME */
+    int ThisTask = 0;
+
+    char * PYTHONHOME = getenv("PYTHONHOME");
+    MPI_Comm_rank(MPI_COMM_WORLD, &ThisTask);
+
+    if(ThisTask == 0) {
+        if (PYTHONHOME == NULL) {
+            fprintf(stderr, "PYTHONHOME must be set to a writable location, for example /dev/shm/\n");
+            MPI_Abort(MPI_COMM_WORLD, 1);
+        }
+    }
+
+    for(i = 0; i < NPACKAGES; i ++) {
+        long fsize;
+        char *fcontent;
+        char * dest = alloca(strlen(PYTHONHOME) + 100);
+        sprintf(dest, "%s/_thispackage.tar.gz",  PYTHONHOME, ThisTask);
+
+        if(ThisTask == 0) {
+            FILE * fp = fopen(PACKAGES[i], "r");
+            if(fp == NULL) {
+                fprintf(stderr, "package file %s not found\n", PACKAGES[i]);
+                MPI_Abort(MPI_COMM_WORLD, 1);
+            }
+            fseek(fp, 0, SEEK_END);
+            fsize = ftell(fp);
+            fseek(fp, 0, SEEK_SET);
+
+            fcontent = malloc(fsize + 1);
+            fread(fcontent, 1, fsize, fp);
+            fclose(fp);
+            MPI_Bcast(&fsize, 1, MPI_LONG, 0, MPI_COMM_WORLD);
+            MPI_Bcast(fcontent, fsize, MPI_BYTE, 0, MPI_COMM_WORLD);
+            printf("operating %s: %ld bytes\n", PACKAGES[i], fsize);
+        } else {
+            MPI_Bcast(&fsize, 1, MPI_LONG, 0, MPI_COMM_WORLD);
+            fcontent = malloc(fsize + 1);
+            MPI_Bcast(fcontent, fsize, MPI_BYTE, 0, MPI_COMM_WORLD);
+        }
+        
+        MPI_Barrier(MPI_COMM_WORLD);
+        FILE * fp = fopen(dest, "w");
+        fwrite(fcontent, 1, fsize, fp);
+        fclose(fp);
+        free(fcontent);
+        MPI_Barrier(MPI_COMM_WORLD);
+        
+        char * untar = alloca(strlen(dest) + strlen(PYTHONHOME) + 100);
+        sprintf(untar, "tar --skip-old-files -xzf \"%s\" -C \"%s\"", dest, PYTHONHOME);
+        system(untar);
+        unlink(dest);
+    }
+    *argc = newargc;
+    *argv = newargv;
+}
 static int
 PyMPI_Main(int argc, char **argv)
 {
@@ -49,6 +135,9 @@ PyMPI_Main(int argc, char **argv)
 #endif
     finalize = 1;
   }
+
+  bcast_packages(&argc, &argv);
+
 
   /* Python main */
 #if PY_MAJOR_VERSION >= 3
