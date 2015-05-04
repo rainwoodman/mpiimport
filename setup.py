@@ -3,6 +3,7 @@ from Cython.Build import cythonize
 
 def myext(*args):
     return Extension(*args, include_dirs=["./"])
+
 extensions = [
         myext("mpiimport.mpiimport", ["src/mpiimport.pyx"]),
         ]
@@ -15,6 +16,6 @@ setup(
     install_requires=['cython'],
     packages= ['mpiimport'],
     scripts = ['src/python-mpi.py'],
-    ext_modules = cythonize(extensions)
+    ext_modules = cythonize(extensions),
 )
 
