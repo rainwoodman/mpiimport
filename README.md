@@ -1,4 +1,9 @@
-# Python Import via MPI
+This project is deprecated. 
+
+An updated solution can be found at http://github.com/rainwoodman/python-mpi-bcast .
+
+
+Python Import via MPI
 
 One problem with large scale parallel application written in Python is the slow startup time. The Python
 Interpreter may spend half an hour before even start processing any useful user logic.
